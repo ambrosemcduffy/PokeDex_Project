@@ -1,6 +1,6 @@
 from pokeApi import get_pokemon, get_flavor_text, get_sprite_url
 from PIL import Image
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PySide2 import QtWidgets, QtCore, QtGui
 
 import requests
 import os
@@ -18,19 +18,24 @@ class Pokedex(QtWidgets.QDialog):
         self.setWindowTitle("pokedex UI")
         self.setStyleSheet("background-color: red")
         self.setWindowIcon(QtGui.QIcon('icon2.jpg'))
-        self.setFixedSize(330, 420)
+        self.setFixedSize(340, 420)
         self.setWindowTitle("Pokedex V2")
         self.setWindowFlags(self.windowFlags()
                     ^ QtCore.Qt.WindowContextHelpButtonHint)
         self.index_arr = []
         self.label = QtWidgets.QLabel()
         self.label.setScaledContents(True)
-        self.label.setFixedSize(150, 150)
+        self.label.setFixedSize(140, 140)
         self.names = self.get_names()
         self.checkboxes = []
         self.buildUI()
 
     def buildUI(self):
+        """
+        Desc: Builds User Interface 
+        Return:
+            None
+        """
         # Creating a VerticleBox Layout initially
         layout = QtWidgets.QVBoxLayout(self)
 
@@ -57,13 +62,23 @@ class Pokedex(QtWidgets.QDialog):
         # Adding the scroll Widget to Image Layout
         imageLayout.addWidget(scrollWidget)
         self.scrollLayout.addWidget(self.scroll_area)
-
         checkBoxWidget = QtWidgets.QWidget()
         self.checkboxLayout = QtWidgets.QVBoxLayout(checkBoxWidget)
         self.scrollLayout.addWidget(checkBoxWidget)
-        for i in self.names:
-            self.add_checkbox(i)
+        # Adding in checkbox per pokemon Name
+        for index, name in enumerate(self.names):
+            box_name = "{}. {}".format(index, name)
+            self.add_checkbox(box_name)
+        # Putting the checkbox inside ScrollArea
         self.scroll_area.setWidget(checkBoxWidget)
+
+        clearWidget = QtWidgets.QWidget()
+        clearLayout = QtWidgets.QVBoxLayout(clearWidget)
+        self.clearBtn = QtWidgets.QPushButton("Clear All")
+        layout.addWidget(clearWidget)
+        clearLayout.addWidget(self.clearBtn)
+        self.clearBtn.clicked.connect(self.set_all_unchecked)
+
 
         # Adding in text Field widget to display flavor text
         textWidget = QtWidgets.QWidget()
@@ -80,6 +95,7 @@ class Pokedex(QtWidgets.QDialog):
         saveWidget = QtWidgets.QWidget()
         saveLayout = QtWidgets.QHBoxLayout(saveWidget)
 
+        # Creating the button for export of Sprite and CSV
         dwnld_Btn = QtWidgets.QPushButton("Download CSV")
         dwnld_Btn.setStyleSheet("background-color: white")
         dwnldS_Btn = QtWidgets.QPushButton("Download Sprite")
@@ -87,21 +103,48 @@ class Pokedex(QtWidgets.QDialog):
         layout.addWidget(saveWidget)
         saveLayout.addWidget(dwnld_Btn)
         saveLayout.addWidget(dwnldS_Btn)
+        # connecting the button functionality.
         dwnldS_Btn.clicked.connect(self.download_sprite)
         dwnld_Btn.clicked.connect(self.download_csv)
         return None
 
-    def get_flavor_text(self, name):
+    def set_all_unchecked(self):
+        """
+        Desc: Set all checkboxes to uncheck
+        Return:
+            None
+        """
+        for checkbox in self.checkboxes:
+            if checkbox.isChecked():
+                checkbox.setChecked(False)
+                self.index_arr = []
+                self.old_state = []
+        return None
+
+    def set_flavor_text(self, name):
+        """
+        Desc: Obtains the requested flavor text for Pokemon
+        Args:
+            name: name of selected pokemon
+        Return:
+            None
+        """
         self.text_field.setReadOnly(True)
-        self.text_field.setWordWrapMode(True)
         self.text_field.setText(get_flavor_text(name))
         return None
 
     def download_csv(self):
+        """
+        Desc: This function downloads the csv into a folder of choice
+        Return:
+            None
+        """
+        # creating a QFileDialog for filebrowser export
         Save_pref = "Python Files (*.csv)"
         file_name = QtWidgets.QFileDialog.getSaveFileName(self,
                                                           'Save File',
                                                           Save_pref)
+        # adding data to a dictionary and list for export
         data_list = []
         for index in self.index_arr:
             data_dict = dict({})
@@ -112,6 +155,7 @@ class Pokedex(QtWidgets.QDialog):
         csv_columns = ["name",
                        "index",
                        "flavor_text"]
+        # Exporting file as csv
         with open(file_name[0], "w") as csvfile:
             writer = csv.DictWriter(csvfile,
                                     fieldnames=csv_columns)
@@ -121,6 +165,11 @@ class Pokedex(QtWidgets.QDialog):
             return None
 
     def download_sprite(self):
+        """
+        Desc: Opens FileBrowser for download of pokemon 
+        Return:
+            None
+        """
         SEL_DIR = "Select Directory"
         file_name = QtWidgets.QFileDialog.getExistingDirectory(self,
                                                                SEL_DIR)
@@ -133,6 +182,13 @@ class Pokedex(QtWidgets.QDialog):
         return None
 
     def add_checkbox(self, name):
+        """
+        Desc: add checkBox Widget to Layout per name
+        Args:
+            name: pokemon name
+        Return:
+            None
+        """
         checkbox = QtWidgets.QCheckBox(name)
         checkbox.stateChanged.connect(self.set_image)
         self.checkboxLayout.addWidget(checkbox)
@@ -140,6 +196,13 @@ class Pokedex(QtWidgets.QDialog):
         return None
 
     def set_image(self, state):
+        """
+        Desc: check state, and change image and flav_text of pokemon
+        Args:
+            state: current state of checkbox
+        Return:
+            None
+        """
         image = QtGui.QImage()
         if state == QtCore.Qt.Checked:
             self.old_state = []
@@ -148,7 +211,7 @@ class Pokedex(QtWidgets.QDialog):
                     self.old_state.append(index)
                     if index not in self.index_arr:
                         self.index_arr.append(index)
-            self.get_flavor_text(self.names[self.index_arr[-1]])
+            self.set_flavor_text(self.names[self.index_arr[-1]])
             sprite_url = get_sprite_url(self.names[self.index_arr[-1]])
             image.loadFromData(requests.get(sprite_url).content)
             self.img = QtGui.QPixmap(image)
@@ -157,6 +220,11 @@ class Pokedex(QtWidgets.QDialog):
         return None
 
     def get_names(self):
+        """
+        Desc: obtains  the names all pokemon
+        Return:
+            names
+        """
         data = get_pokemon()
         n_names = len(data)
         names = []
