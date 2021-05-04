@@ -7,7 +7,6 @@ import os
 import urllib3
 import csv
 import io
-import sys
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -231,10 +230,3 @@ class Pokedex(QtWidgets.QDialog):
         for index in range(n_names):
             names.append(data[index]["name"])
         return names
-
-
-if __name__ == "__main__":
-    app = QtWidgets.QApplication(sys.argv)
-    ui = Pokedex()
-    ui.show()
-    sys.exit(app.exec_())
